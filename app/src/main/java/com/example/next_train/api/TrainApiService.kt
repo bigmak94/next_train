@@ -74,19 +74,22 @@ object TrainApiService {
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
-    private fun formatTime(isoTime: String?): String {
-        if (isoTime == null) return "Horaire inconnu"
+    private fun getWaitingMinutes(isoTime: String?): Int {
+        if (isoTime == null) return -1
         return try {
             val date = isoDateFormat.parse(isoTime)
             val now = Date()
-            val diffMinutes = ((date.time - now.time) / 60000).toInt()
-            when {
-                diffMinutes <= 0 -> "À l'approche"
-                diffMinutes == 1 -> "Dans 1 minute"
-                else -> "Dans $diffMinutes minutes"
-            }
+            ((date.time - now.time) / 60000).toInt()
         } catch (e: Exception) {
-            "Horaire inconnu"
+            -1
+        }
+    }
+
+    private fun formatTime(minutes: Int): String {
+        return when {
+            minutes <= 0 -> "À l'approche"
+            minutes == 1 -> "Dans 1 minute"
+            else -> "Dans $minutes minutes"
         }
     }
 
@@ -99,9 +102,13 @@ object TrainApiService {
                     .firstOrNull()?.MonitoredStopVisit
                     ?.map { visit ->
                         val journey = visit.MonitoredVehicleJourney
+                        val waitingMinutes = getWaitingMinutes(
+                            journey.MonitoredCall.ExpectedDepartureTime 
+                            ?: journey.MonitoredCall.AimedDepartureTime
+                        )
                         TrainInfo(
-                            time = formatTime(journey.MonitoredCall.ExpectedDepartureTime 
-                                ?: journey.MonitoredCall.AimedDepartureTime)
+                            waitingMinutes = waitingMinutes,
+                            displayTime = formatTime(waitingMinutes)
                         )
                     } ?: emptyList()
                 kotlin.Result.success(trains)
@@ -115,5 +122,6 @@ object TrainApiService {
 }
 
 data class TrainInfo(
-    val time: String
+    val waitingMinutes: Int,
+    val displayTime: String
 ) 

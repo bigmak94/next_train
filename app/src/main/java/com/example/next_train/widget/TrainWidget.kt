@@ -28,6 +28,14 @@ class TrainWidget : AppWidgetProvider() {
     companion object {
         private const val ACTION_UPDATE = "com.example.next_train.UPDATE_WIDGET"
 
+        private fun getBackgroundResource(waitingMinutes: Int): Int {
+            return when {
+                waitingMinutes >= 8 -> R.drawable.widget_background_green
+                waitingMinutes in 3..7 -> R.drawable.widget_background_orange
+                else -> R.drawable.widget_background_red
+            }
+        }
+
         fun updateAppWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -56,11 +64,12 @@ class TrainWidget : AppWidgetProvider() {
                     result.onSuccess { trains ->
                         if (trains.isNotEmpty()) {
                             val nextTrain = trains[0]
-                            views.setTextViewText(R.id.next_train, "Prochain train : ${nextTrain.time}")
+                            views.setTextViewText(R.id.next_train, "Prochain train : ${nextTrain.displayTime}")
+                            views.setInt(R.id.widget_layout, "setBackgroundResource", getBackgroundResource(nextTrain.waitingMinutes))
 
                             if (trains.size > 1) {
                                 val followingTrain = trains[1]
-                                views.setTextViewText(R.id.following_train, "Train suivant : ${followingTrain.time}")
+                                views.setTextViewText(R.id.following_train, "Train suivant : ${followingTrain.displayTime}")
                             }
 
                             views.setTextViewText(
@@ -70,11 +79,13 @@ class TrainWidget : AppWidgetProvider() {
                         } else {
                             views.setTextViewText(R.id.next_train, "Aucun train prévu")
                             views.setTextViewText(R.id.following_train, "")
+                            views.setInt(R.id.widget_layout, "setBackgroundResource", R.drawable.widget_background_red)
                         }
                     }.onFailure {
                         views.setTextViewText(R.id.next_train, "Erreur de chargement")
                         views.setTextViewText(R.id.following_train, "Veuillez réessayer")
                         views.setTextViewText(R.id.last_update, it.message ?: "Erreur inconnue")
+                        views.setInt(R.id.widget_layout, "setBackgroundResource", R.drawable.widget_background_red)
                     }
 
                     appWidgetManager.updateAppWidget(appWidgetId, views)
@@ -82,6 +93,7 @@ class TrainWidget : AppWidgetProvider() {
                     views.setTextViewText(R.id.next_train, "Erreur de connexion")
                     views.setTextViewText(R.id.following_train, "Veuillez réessayer")
                     views.setTextViewText(R.id.last_update, e.message ?: "Erreur inconnue")
+                    views.setInt(R.id.widget_layout, "setBackgroundResource", R.drawable.widget_background_red)
                     appWidgetManager.updateAppWidget(appWidgetId, views)
                 }
             }
